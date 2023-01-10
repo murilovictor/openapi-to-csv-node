@@ -1,10 +1,11 @@
 import {Field} from "./Field";
+import {StatusCode} from "./StatusCode";
 
 export class Method {
 
     method?: string
     description?: string
     summary?: string
-    fields?: Field[]
+    status?: StatusCode[] = []
 
 }

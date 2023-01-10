@@ -17,19 +17,20 @@ This project was developed with the following technologies:
 The objective of this project is to export all attributes from an openapi (JSON) file to a CSV file and rest api.
 
 
-### Csv File Example
+### 👌 Csv File example
 
 |title|version|path|method|descriptionEndpoint|summaryEndpoint|fieldName|currentPath|descriptionField|example|required|exampleModel|
 |-----|-------|----|------|-------------------|---------------|---------|-----------|----------------|-------|--------|------------|
 |API InsuranceAuto - Open Insurance Brasil|1.1.0|/{policyId}/policy-info|get|Método para obter as informações gerais da apólice|Obtém as informações gerais da apólice identificada por {policyId}|identificationType|.data.insureds[0].identificationType|Tipo de Documento da Pessoa|CPF|SIM|CPF, CNPJ, OUTROS|
 
 
-### Params Exemple
+### Params example
 
-| Query Param | Description | type    |
-|-------------|-------------|---------|
-| onlyRequired | exports only required fields for each endpoint | boolean |
-| exportToCsv | export the file in the project directory out/... | boolean |
+| Query Param | Description                                                    | type    | default | example                  |
+|-------------|----------------------------------------------------------------|---------|---------|--------------------------|
+| onlyRequired | Exports only required fields for each endpoint                 | boolean | false   | onlyRequired=true        |
+| exportToCsv | Export the file in the project directory out/...               | boolean | false   | exportToCsv=true         |
+| statusCodeExport | Exports only attributes according to the informed status code. | number  | 200     | statusCodeExport=201,500 |
 
 ## 🚀 How to run?
 
@@ -37,7 +38,14 @@ The objective of this project is to export all attributes from an openapi (JSON)
 - Run `yarn` for download the dependencies
 - Run `yarn dev` for start the application.
 
-Finally, the application will be available on `http://localhost:3000/api/openapi?onlyRequired=false&exportToCsv=true`
+Finally, the application will be available on `http://localhost:3000/openapi/toCsv`
+
+#### 💣 Curl example
+```bash
+curl --location --request POST 'http://localhost:3000/openapi/toCsv?onlyRequired=false&exportToCsv=true&statusCodeExport=200, 201, 202' \
+--header 'Content-Type: application/json' \
+--data-raw '{YOUR_JSON_HERE}'
+```
 
 ## 📄 Licença
 

@@ -2,32 +2,27 @@ import {Field} from "../model/Field";
 import $RefParser from "@apidevtools/json-schema-ref-parser";
 import {Endpoint} from "../model/Endpoint";
 import {Method} from "../model/Method";
-import {CsvTemplate} from "../model/CsvTemplate";
-import fs from "fs";
-import * as csv from "fast-csv";
+import jsonpath from "jsonpath";
+import {StatusCode} from "../model/StatusCode";
 
 export class OpenapiService {
-    async walking(schema: any): Promise<Field[]> {
-        return await walking(schema, '')
-    }
 
-    async processOpenapi(body: any, openapiService: OpenapiService, onlyRequired: any) {
+    async processOpenapi(body: any, openapiService: OpenapiService, onlyRequired: any,
+                         statusCodeExport: string[]) {
         let schema: any = await $RefParser.dereference(body)
         let paths = schema.paths;
         let info = schema.info;
 
         let endpoints: Endpoint[] = []
 
-        for (let pathKey in paths) {
-            let pathValue = paths[pathKey];
+        for (const [pathKey, pathValue] of Object.entries(paths)) {
 
-            for (let methodKey in pathValue) {
-                let methodValue = pathValue[methodKey]
+            let endpoint: Endpoint = new Endpoint()
+            endpoint.path = pathKey
+
+            for (const [methodKey, methodValue] of Object.entries(pathValue)) {
                 let responses = methodValue.responses;
 
-
-                let endpoint: Endpoint = new Endpoint()
-                endpoint.path = pathKey
                 endpoint.description = methodValue.description
                 endpoint.summary = methodValue.summary
                 endpoint.title = info.title
@@ -38,32 +33,35 @@ export class OpenapiService {
                 method.description = methodValue.description
                 method.summary = methodValue.summary
 
-                for (let responseKey in responses) {
-                    let responseValue = responses[responseKey]
+                for (const [responseKey, responseValue] of Object.entries(responses)) {
+                    let statusCode: StatusCode = new StatusCode()
+                    statusCode.status = responseKey
+                    // @ts-ignore
+                    statusCode.description = responseValue?.description
 
-                    if (responseKey == '200' || responseKey == '201') {
-
-                        let schemaChild = responseValue.content['application/json'].schema
-
-                        await openapiService.walking(schemaChild)
+                    if (statusCodeExport.includes(responseKey)) {
+                        await walkingSchema(responseValue)
                             .then(fields => {
-                                if (onlyRequired == 'true') {
-                                    method.fields = fields
-                                        .filter(value => value.required == true)
+                                if (fields.length > 0) {
+                                    if (onlyRequired == 'true') {
+                                        statusCode.fields = fields
+                                            .filter(value => value.required == true)
+                                    } else {
+                                        statusCode.fields = fields
+                                    }
+                                    method.status.push(statusCode)
                                 } else {
-                                    method.fields = fields
+                                    console.log('deu ruim')
                                 }
-                            }, reason => console.error(reason))
 
-                        console.log(responseValue)
-                        // @ts-ignore
-                        endpoint.methods.push(method)
+
+                            }, reason => console.error(reason))
                     } else {
-                        console.log('Status Code [' + responseKey + '] not in [200, 201]')
+                        console.warn(`Status Code ['${responseKey}'] not in [${statusCodeExport}]`)
                     }
 
                 }
-
+                endpoint.methods.push(method)
                 endpoints.push(endpoint)
             }
 
@@ -71,47 +69,24 @@ export class OpenapiService {
         return endpoints;
     }
 
-    exportToCsv(endpoints: Endpoint[], exportToCsvFlag: any, title: string, version: string) {
-
-        let csvTemplates: CsvTemplate[] = []
-
-        endpoints.forEach(endpoint => {
-            endpoint.methods?.forEach(method => {
-                method.fields?.forEach(field => {
-                    csvTemplates.push({
-                        title: endpoint.title,
-                        version: endpoint.version,
-                        path: endpoint.path,
-
-                        method: method.method,
-                        descriptionEndpoint: method.description,
-                        summaryEndpoint: method.summary,
-
-                        fieldName: field.fieldName,
-                        currentPath: field.currentPath,
-                        descriptionField: field.description,
-                        example: field.example,
-                        required: field.required ? 'SIM' : 'NÃO',
-                        exampleModel: field.enum?.join(', ')
-                    })
-                })
-            })
-
-        })
-
-        const stream = fs.createWriteStream(`out/${title} - ${version} - ${new Date().getTime()}.csv`);
-
-        csv
-            .write(csvTemplates, {headers: true})
-            .pipe(stream)
-            .on('finish', () => {
-                console.log('Data written to CSV file');
-            });
-    }
-
 }
 
-const walking = async (schema: any, currentPath: string, fields: Field[] = [], requiredFields?: Set<string>) => {
+async function walkingSchema(responseValue): Promise<Field[]> {
+    let schema = jsonpath.query(responseValue, '$..schema')[0]
+
+    if (schema) {
+        console.log(responseValue)
+        return await walking(schema, '')
+    } else {
+        console.log('No body. ', responseValue)
+        return Promise.all([{
+            fieldName: 'no body',
+            currentPath: 'no body'
+        }])
+    }
+}
+
+async function walking(schema: any, currentPath: string, fields: Field[] = [], requiredFields?: Set<string>) {
     let objectType = schema.type
 
     if (objectType == 'array') {
