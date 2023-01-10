@@ -1,0 +1,10 @@
+import {Router} from "express";
+import {OpenapiController} from "./controller/OpenapiController";
+
+const router = Router();
+
+const openapiController = new OpenapiController();
+
+router.post("/openapi/toCsv", openapiController.handle);
+
+export {router};
