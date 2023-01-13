@@ -72,7 +72,7 @@ export class OpenapiService {
 }
 
 async function walkingSchema(responseValue): Promise<Field[]> {
-    let schema = jsonpath.query(responseValue, '$..schema')[0]
+    let schema = jsonpath.query(responseValue.content, '$..schema')[0]
 
     if (schema) {
         console.log(responseValue)
