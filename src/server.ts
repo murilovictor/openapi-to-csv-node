@@ -18,18 +18,13 @@ app.use(bodyParser.json({limit: '100mb'}));
 app.use(router);
 
 app.use(
-  (err: Error, request: Request, response: Response, next: NextFunction) => {
-    if (err instanceof Error) {
-      return response.status(400).json({
-        error: err.message,
-      });
+    (err: Error, request: Request, response: Response, next: NextFunction) => {
+        return response.status(500).json({
+            status: "Internal Server Error",
+            message: err.message,
+            stack: err.stack
+        });
     }
-
-    return response.status(500).json({
-      status: "error",
-      message: "Internal Server Error",
-    });
-  }
 );
 
 app.listen(3000, () => console.log("Server is running. Port: 3000"));

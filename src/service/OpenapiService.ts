@@ -4,6 +4,7 @@ import {Endpoint} from "../model/Endpoint";
 import {Method} from "../model/Method";
 import jsonpath from "jsonpath";
 import {StatusCode} from "../model/StatusCode";
+import {TechnicalException} from "../exception/TechnicalException";
 
 export class OpenapiService {
 
@@ -51,11 +52,14 @@ export class OpenapiService {
                                     }
                                     method.status.push(statusCode)
                                 } else {
-                                    console.log('deu ruim')
+                                    console.error('Error: fields.length = 0')
                                 }
 
 
-                            }, reason => console.error(reason))
+                            }, reason => {
+                                console.error(reason)
+                                throw new TechnicalException(reason)
+                            })
                     } else {
                         console.warn(`Status Code ['${responseKey}'] not in [${statusCodeExport}]`)
                     }
@@ -87,18 +91,29 @@ async function walkingSchema(responseValue): Promise<Field[]> {
 }
 
 async function walking(schema: any, currentPath: string, fields: Field[] = [], requiredFields?: Set<string>) {
-    let objectType = schema.type
+    let objectType = schema.type || 'object'
+
+    if (objectType == 'object' && schema.items) {
+        objectType = 'array'
+    }
 
     if (objectType == 'array') {
-        await walking(schema.items, `${currentPath}[0]`, fields, new Set<string>(schema.required))
+        await walking(schema.items, `${currentPath}[0]`, fields, new Set<string>(schema?.items?.required || requiredFields))
     } else if (objectType == 'object') {
-        let properties = schema.properties
-        for (const [key, value] of Object.entries(properties)) {
-            await walking(value, `${currentPath}.${key}`, fields, new Set<string>(schema.required))
+        let properties = schema?.properties
+        if (properties) {
+            for (const [key, value] of Object.entries(properties)) {
+                await walking(value, `${currentPath}.${key}`, fields, new Set<string>(schema?.required))
+            }
         }
     } else {
         let arr = currentPath.split('.');
         let fieldName = arr[arr.length - 1];
+
+        if (fieldName.includes("[0]")) {
+            fieldName = fieldName.replace('[0]', '')
+        }
+
         fields.push({
             fieldName: fieldName,
             currentPath: currentPath,

@@ -5,7 +5,7 @@ import * as csv from "fast-csv";
 
 export class CsvService {
 
-    exportToCsv(endpoints: Endpoint[], exportToCsvFlag: any, title: string, version: string) {
+    exportToCsv(endpoints: Endpoint[], title: string, version: string) {
 
         let csvTemplates: CsvTemplate[] = []
 
@@ -22,19 +22,25 @@ export class CsvService {
                             descriptionEndpoint: normalize(method.description),
                             summaryEndpoint: normalize(method.summary),
 
-                            fieldName: field.fieldName,
                             currentPath: field.currentPath,
-                            descriptionField: normalize(field.description),
-                            example: normalize(field.example),
+                            fieldName: field.fieldName,
                             required: field.required ? 'SIM' : 'NÃO',
-                            exampleModel: field.enum?.join(', ')
+                            descriptionField: normalize(field.description),
+                            minLength: field.minLength,
+                            maxLength: field.maxLength,
+                            type: field.type,
+                            example: normalize(field.example),
+                            exampleModel: field.enum?.join(', '),
+                            format: field.format,
+                            pattern: field.pattern
                         })
                     })
                 })
             })
         })
 
-        const stream = fs.createWriteStream(`out/${title} - ${version} - ${new Date().getTime()}.csv`);
+        const stream = fs.createWriteStream(`out/${title} - ${version}.csv`);
+        // const stream = fs.createWriteStream(`out/${title} - ${version} - ${new Date().getTime()}.csv`);
 
         csv
             .write(csvTemplates.sort(sortByPath), {
