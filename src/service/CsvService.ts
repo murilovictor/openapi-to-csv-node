@@ -39,14 +39,15 @@ export class CsvService {
             })
         })
 
-        const stream = fs.createWriteStream(`out/${title} - ${version}.csv`);
+        const stream = fs.createWriteStream(`out/${title} - ${version}.csv`, {encoding: 'utf8'});
         // const stream = fs.createWriteStream(`out/${title} - ${version} - ${new Date().getTime()}.csv`);
 
         csv
             .write(csvTemplates.sort(sortByPath), {
                 headers: true,
                 delimiter: ';',
-                includeEndRowDelimiter: true
+                includeEndRowDelimiter: true,
+
             })
             .pipe(stream)
             .on('finish', () => {
